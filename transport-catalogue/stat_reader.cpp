@@ -11,66 +11,61 @@
 
 namespace output {
 
-using std::string;
-using std::vector;
-using std::cout;
-using std::endl;
 using namespace std::string_literals;
 
-void PrintBus(string_view bus, const TransportCatalogue& catalogue)
+void PrintBus(std::ostream& output, std::string_view bus, const TransportCatalogue& catalogue)
 {
-    cout << "Bus "s << bus << ": "s;
+    output << "Bus "s << bus << ": "s;
     auto [check, size, unique_size, distance, geo_distance] = catalogue.GetBusInfo(bus);
     if (!check) {
-        cout << "not found"s << endl;
+        output << "not found"s << std::endl;
         return;
     }
-    cout << size << " stops on route, "s << unique_size << " unique stops, "s
-         << std::setprecision(6) << static_cast<double>(distance) << " route length, "s 
-         << static_cast<double>(distance / geo_distance) << " curvature"s << endl;
+    output << size << " stops on route, "s << unique_size << " unique stops, "s
+           << std::setprecision(6) << static_cast<double>(distance) << " route length, "s 
+           << static_cast<double>(distance / geo_distance) << " curvature"s << std::endl;
 }
 
-void PrintBusesInStop(string_view stop, const TransportCatalogue& catalogue)
+void PrintBusesInStop(std::ostream& output, std::string_view stop, const TransportCatalogue& catalogue)
 {
-    cout << "Stop "s << stop << ": "s;
+    output << "Stop "s << stop << ": "s;
     if (!catalogue.CheckStop(stop)) {
-        cout << "not found"s << endl;
+        output << "not found"s << std::endl;
         return;
     }
 
-    const set<string_view>& buses = catalogue.GetBusesInStop(stop);
+    const std::set<std::string_view>& buses = catalogue.GetBusesInStop(stop);
     if (buses.empty()) {
-        cout << "no buses"s << endl;
+        output << "no buses"s << std::endl;
         return;
     }
 
-    cout << "buses"s;
+    output << "buses"s;
 
     for (const auto& bus : buses) {
-        cout << " "s << bus;
+        output << " "s << bus;
     }
-    cout << endl;
+    output << std::endl;
 }
 
-void release_output(istream& input, const TransportCatalogue& catalogue)
+void ExecuteQueries(std::istream& input, std::ostream& output, const TransportCatalogue& catalogue)
 {
     size_t size = 0;
     input >> size;
     input.ignore();
-    vector<string> queryes(size);
 
     for (size_t i = 0; i < size; ++i)
     {
-        string line;
+        std::string line;
         getline(input, line);
         
         if (line.substr(0, 4) != "Stop"s)
         {
-            PrintBus(line.substr(4, line.npos), catalogue);
+            PrintBus(output, line.substr(4, line.npos), catalogue);
         }
         else
         {
-            PrintBusesInStop(line.substr(5, line.npos), catalogue);
+            PrintBusesInStop(output, line.substr(5, line.npos), catalogue);
         }
     }
 }

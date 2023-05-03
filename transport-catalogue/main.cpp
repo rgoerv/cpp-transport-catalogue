@@ -5,5 +5,5 @@ int main()
 {
     using namespace test;
     Test();
-    Read();
+    Read(std::cin, std::cout);
 }

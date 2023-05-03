@@ -1998,9 +1998,3 @@ Stop FMXRZoHLXZ0y5ERBsVn: buses 0WPsUYuIEOKVSv2hNlTt 1vNftxyHpM0x74Wa CZVVz 2Hxs
 Stop VPPzgHNvKrGPHnhemWd: buses 4mU7srZl3sacvBDjUGiWYsl 5JBIcqnmTenpAxzbA6BGQ 5iZ58Al4GvIduHdaMjYttRz 5vo9KGqJtrUa9 iBCWuKOsUr2 6uoMUCRg9l4iA5 7rDLAJPXmNbCCVMz9iL3uL BRim aqLnxbPCXa N4tALNT DxkBWhm7vF G00E Fkk7ZnQmUvVftKz IGHwCl19k2R7j LBGeDrSzH O6 THUI9Tkg TN9xc ZPI0XPfUD Zvj dh H8Ew6pcLA9L4l gm jA8KJLbofPaUCqEP3lyQyd9 jD l fUv1fhm nP2Fa4u4jpCZI0CLaMxB oL9fbXJmWty omV7P Psdc r9rtTwWeWgKuR1 sGHvQXAlnkclPaKs tdSSLkQhSa xhOuj2 yHHzku15G
 Stop VX5i: buses 03sIuEY7Jb8m 30 HHgNkCjKt68A0Z1 388ITPwx46ZvztDNBE 1y 3UjIMW kpo9WF7gUeH3N 4UjHn8V8vM42fpN9Uweu9BJ1 62N 6X 9Zv 9wch3iEdptL B1u98Z Cbc8hmU38s veV DHRqbF DQYcZoc7O3vnIRpsOrH EFo8nEWrayK1GMmA0dSURa FW FXugb0xviKc FlagZF JrxEkorVQG NeZmgvkPpL5dof R6eRl5ZPyckrcKCm XtA23jiK2VFKx YD3Xq YOrqvWtIsCq7mIuCnpaloXizi culmgyjjqTiLa0hRDhGAFILd dfvWgTvaVCG oc eqDbuGQxus jPjE pj3 g2IXg7W7REZ4OWxK hE j53gqznz46LntX t jp4hRl4 lT1NfMNd962BUXIs6u6DwT qmruy2Bb V0pPIPHiGzGCe7 rth2xvBozUuqqA s8fmlLvH t tSeQAKQ22HNG uFnMoUZ2 w82ILXqcTXJI wYK
 Stop HD1z4DZ4Sm4jYh: not found
-Bus 256: 6 stops on route, 5 unique stops, 5950 route length, 1.36124 curvature
-Bus 750: 7 stops on route, 3 unique stops, 27400 route length, 1.30853 curvature
-Bus 751: not found
-Stop Samara: not found
-Stop Prazhskaya: no buses
-Stop Biryulyovo Zapadnoye: buses 256 828

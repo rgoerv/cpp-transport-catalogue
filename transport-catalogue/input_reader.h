@@ -13,37 +13,32 @@ class Reader;
 #include <string_view>
 #include <tuple>
 
-void Read();
+void Read(std::istream& in, std::ostream& out);
 
 namespace input {
-
-using std::istream;
-using std::string;
-using std::string_view;
-using std::vector;
 
 using namespace std::string_literals;
 using namespace Catalogue;
 
-istream& fill_input(istream& input, Reader& reader);
+std::istream& FillInput(std::istream& input, Reader& reader);
 
 class Reader {
 public:
     void Reserve(size_t size);
 
-    istream& GetInput(istream& input);
+    std::istream& GetInput(std::istream& input);
     void FillCatalogue();
 
     TransportCatalogue& GetCatalogue();
 
 private:
-    vector<string> input_queries_;
-    unordered_map<string_view, string_view> stop_to_distance_queries_;
-    vector<size_t> bus_queries_;
+    std::vector<std::string> input_queries_;
+    std::unordered_map<std::string_view, std::string_view> stop_to_distance_queries_;
+    std::vector<size_t> bus_queries_;
     TransportCatalogue catalogue;
 
-    void AddStop(string_view query_line);
-    void AddBus(string_view query_line);
+    void AddStop(std::string_view query_line);
+    void AddBus(std::string_view query_line);
 };
 
 } // namespace input
