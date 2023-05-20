@@ -1,4 +1,5 @@
 #include "transport_catalogue.h"
+#include "domain.h"
 
 #include <string>
 #include <string_view>
@@ -11,11 +12,6 @@
 #include <iostream>
 
 namespace Catalogue {
-
-bool Bus::CheckStop(const Stop* stop) const
-{
-    return std::count(route_.begin(), route_.end(), stop) > 0;
-}
 
 void TransportCatalogue::AddStop(const std::string& name, double lat, double lng)
 {
@@ -33,12 +29,13 @@ bool TransportCatalogue::CheckStop(std::string_view name) const
     return stopname_to_stop_.count(name) > 0;
 }
 
-void TransportCatalogue::AddBus(const std::string& name, const std::vector<const Stop*>& route, int64_t length, double geo_length)
+void TransportCatalogue::AddBus(const std::string& name, const std::vector<const Stop*>& route,
+    int64_t length, double geo_length, bool is_roundtrip, const Stop* last_stop)
 {
     std::set<const Stop*> unique(route.begin(), route.end());
     size_t unique_size = unique.size();
 
-    buses_.push_back(Bus { name, route, unique_size, length, geo_length });
+    buses_.push_back(Bus { name, route, unique_size, length, geo_length, is_roundtrip, last_stop});
     busname_to_bus_.insert({ buses_.back().name_, &buses_.back() });
     
     std::string_view busname = buses_.back().name_;
@@ -51,6 +48,18 @@ void TransportCatalogue::AddBus(const std::string& name, const std::vector<const
 const Bus* TransportCatalogue::FindBus(std::string_view name) const
 {
     return busname_to_bus_.at(name);
+}
+
+const std::unordered_map<std::string_view, const Bus*>& TransportCatalogue::GetBusNameToBus() const {
+    return busname_to_bus_;
+}
+
+const std::unordered_map<const Stop*, std::set<std::string_view>>& TransportCatalogue::GetStopToBuses() const {
+    return stop_to_buses_;
+}
+
+const std::deque<Bus>& TransportCatalogue::GetBuses() const {
+    return buses_;
 }
 
 const BusInfo TransportCatalogue::GetBusInfo(std::string_view name) const
@@ -79,7 +88,7 @@ void TransportCatalogue::AddDistance(std::string_view stop_x, std::string_view s
     dist_btn_stops_[{ FindStop(stop_x), FindStop(stop_y) }] = distance;
 }
 
-const int64_t TransportCatalogue::GetDistance(const Stop* from, const Stop* to) const
+int64_t TransportCatalogue::GetDistance(const Stop* from, const Stop* to) const
 {
     // i want .contains(key) from c++20
     return dist_btn_stops_.count({ from, to }) > 0 ? dist_btn_stops_.at({ from, to }) : 0;
