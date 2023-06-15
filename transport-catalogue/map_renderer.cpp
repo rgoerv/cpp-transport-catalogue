@@ -28,7 +28,7 @@ MapRenderer::MapRenderer(json::Document settings, const Catalogue::TransportCata
 RenderSettings::RenderSettings(const json::Document& render_settings_) noexcept 
     : render_settings(render_settings_)
 {
-    const auto& settings = render_settings.GetRoot().AsMap();
+    const auto& settings = render_settings.GetRoot().AsDict();
 
     width = settings.at("width"s).AsDouble();
     height = settings.at("height"s).AsDouble();
@@ -102,7 +102,7 @@ svg::Color RenderSettings::GetColor(const json::Node& color) const {
 }
 
 std::vector<svg::Color> RenderSettings::GetPalette() const {
-    const auto& palette_settings = render_settings.GetRoot().AsMap().at("color_palette").AsArray();
+    const auto& palette_settings = render_settings.GetRoot().AsDict().at("color_palette").AsArray();
     std::vector<svg::Color> palette;
     palette.reserve(palette_settings.size());
 
@@ -144,9 +144,8 @@ void MapRenderer::AddBusLines()  {
             .SetFillColor(svg::NoneColor);
         map_render.Add(busline_map);
 
-        // busname_to_color.insert({ busname, palette_pos });
         if (!route.empty()) {
-            // 
+            //
             NextPos(palette_pos);
         }
     }

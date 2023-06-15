@@ -33,9 +33,7 @@ struct RenderSettings {
 class MapRenderer {
 public:
     MapRenderer(json::Document settings, const Catalogue::TransportCatalogue& ts);
-
     void Render(std::ostream& out) const;
-
 private:
     RenderSettings render_settings;
     svg::Document map_render;

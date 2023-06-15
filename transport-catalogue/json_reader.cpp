@@ -1,4 +1,6 @@
+#include "json.h"
 #include "json_reader.h"
+#include "json_builder.h"
 #include "map_renderer.h"
 
 #include <sstream>
@@ -17,11 +19,11 @@ void Reader::Reply(std::ostream& output) const {
 }
 
 const json::Document Reader::GetRenderSettings() const {
-    return Document { Node { document.GetRoot().AsMap().at("render_settings"s).AsMap() } };
+    return Document { Node { document.GetRoot().AsDict().at("render_settings"s).AsDict() } };
 }
 
 void Reader::BaseRequestHandle() {
-    const Array base_requests(document.GetRoot().AsMap().at("base_requests"s).AsArray());
+    const Array base_requests(document.GetRoot().AsDict().at("base_requests"s).AsArray());
 
     StopBaseRequestHandle(base_requests);
     BusBaseRequestHandle(base_requests);
@@ -29,13 +31,13 @@ void Reader::BaseRequestHandle() {
 
 void Reader::StopBaseRequestHandle(const Array& base_requests) {
     for (const auto& request : base_requests) {
-        const Dict& dictionary = request.AsMap();
+        const Dict& dictionary = request.AsDict();
         if (dictionary.at("type"s).AsString() == "Stop"s) {
             catalogue
                 .AddStop(dictionary.at("name"s).AsString(),
                     dictionary.at("latitude"s).AsDouble(),
                     dictionary.at("longitude"s).AsDouble());
-            for (const auto& [stop, distance] : dictionary.at("road_distances"s).AsMap()) {
+            for (const auto& [stop, distance] : dictionary.at("road_distances"s).AsDict()) {
                 stops_to_dstns.insert({{ dictionary.at("name"s).AsString(), stop }, distance.AsInt()});
             }
         }
@@ -49,7 +51,7 @@ void Reader::StopBaseRequestHandle(const Array& base_requests) {
 
 void Reader::BusBaseRequestHandle(const Array& base_reauest) {
     for (const auto& request : base_reauest) {
-        const Dict& dictionary = request.AsMap();
+        const Dict& dictionary = request.AsDict();
         if (dictionary.at("type"s).AsString() == "Bus"s) {
             std::vector<const domain::Stop*> stops;
             const Array arr_stops(dictionary.at("stops"s).AsArray());
@@ -89,10 +91,10 @@ void Reader::AgreeDistances(const std::vector<const domain::Stop*>& stops, int64
 }
 
 void Reader::StatRequestHandle() {
-    const Array stat_requests(document.GetRoot().AsMap().at("stat_requests"s).AsArray());
+    const Array stat_requests(document.GetRoot().AsDict().at("stat_requests"s).AsArray());
 
     for (const auto& request : stat_requests) {
-        const auto& type = request.AsMap().at("type"s).AsString();
+        const auto& type = request.AsDict().at("type"s).AsString();
         if (type == "Stop"s) {
             StopStatRequestHandle(request);
         } else if (type == "Bus"s) {
@@ -104,47 +106,55 @@ void Reader::StatRequestHandle() {
 }
 
 void Reader::BusStatRequestHandle(const Node& request) {
-    auto [check, size, unique_size, distance, geo_distance] = catalogue.GetBusInfo(request.AsMap().at("name"s).AsString());
-    const int id = request.AsMap().at("id"s).AsInt();
-
-    Dict dictionary;
-    dictionary.insert({ "request_id"s, Node { id } });           
+    auto [check, size, unique_size, distance, geo_distance] = catalogue.GetBusInfo(request.AsDict().at("name"s).AsString());
+    const int id = request.AsDict().at("id"s).AsInt();
+    
+    json::Builder builder;
+    builder.StartDict().Key("request_id").Value(id);       
             
     if (!check) {
-        dictionary.insert({ "error_message"s, Node { "not found"s } });
-        stat_response.push_back(Node { dictionary });
+        builder.Key("error_message"s).Value("not found"s).EndDict();
+        stat_response.push_back(builder.Build());
         return;
     }
-  
-    dictionary.insert({ "curvature"s, Node { static_cast<double>(distance / geo_distance) } });
-    dictionary.insert({ "route_length"s, Node { static_cast<int>(distance) } });
-    dictionary.insert({ "stop_count"s, Node { static_cast<int>(size) } });
-    dictionary.insert({ "unique_stop_count"s, Node { static_cast<int>(unique_size) } });
 
-    stat_response.push_back(Node { dictionary });
+    builder
+        .Key("curvature"s)
+        .Value(static_cast<double>(distance / geo_distance))
+        .Key("route_length"s)
+        .Value(static_cast<int>(distance))
+        .Key("stop_count"s)
+        .Value(static_cast<int>(size))
+        .Key("unique_stop_count"s)
+        .Value(static_cast<int>(unique_size))
+        .EndDict();
+    stat_response.push_back(builder.Build());
 }
 
 void Reader::StopStatRequestHandle(const Node& request) {
-    const int id = request.AsMap().at("id"s).AsInt();
+    const int id = request.AsDict().at("id"s).AsInt();
 
-    Dict dictionary;
-    dictionary.insert({ "request_id"s, Node { id } }); 
+    json::Builder builder;
+    builder.StartDict().Key("request_id"s).Value(id);
 
-    const auto& stop = request.AsMap().at("name").AsString();
+    const auto& stop = request.AsDict().at("name").AsString();
     if (!catalogue.CheckStop(stop)) {
-        dictionary.insert({ "error_message"s, Node { "not found"s } });
-        stat_response.push_back(Node { dictionary });
+        builder.Key("error_message"s).Value("not found"s).EndDict();
+        stat_response.push_back(builder.Build());
         return;
     }
 
     const std::set<std::string_view>& buses = catalogue.GetBusesInStop(stop);
-    Array result;
+    json::Builder arr_builder;
+    arr_builder.StartArray();
     for (const auto& bus : buses) {
-        result.push_back(Node { static_cast<std::string>(bus) });
+        arr_builder.Value(static_cast<std::string>(bus));
     }
-    dictionary.insert({ "buses"s, Node { result } });
+    arr_builder.EndArray();
 
-    stat_response.push_back(Node { dictionary });
+    builder.Key("buses"s).Value(arr_builder.Build().AsArray()).EndDict();
+
+    stat_response.push_back(builder.Build());
 }
 
 void Reader::MapStatRequestHandle(const Node& request) {
@@ -153,11 +163,15 @@ void Reader::MapStatRequestHandle(const Node& request) {
     std::stringstream render_out;
     renderer.Render(render_out);
 
-    Dict dictionary;
-    dictionary.insert({ "map"s, render_out.str() });
-    dictionary.insert({ "request_id"s, request.AsMap().at("id"s).AsInt() });
+    json::Builder builder;
+    builder.StartDict()
+        .Key("map"s)
+        .Value(render_out.str())
+        .Key("request_id"s)
+        .Value(request.AsDict().at("id"s).AsInt())
+        .EndDict();
 
-    stat_response.push_back(Node { dictionary });
+    stat_response.push_back(builder.Build());
 }
 
 const TransportCatalogue& Reader::GetCatalogue() const {

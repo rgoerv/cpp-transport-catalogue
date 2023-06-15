@@ -14,8 +14,7 @@ int main()
      * с ответами.
      * Вывести в stdout ответы в виде JSON
      */
+    // setlocale(LC_ALL, "rus");
     JsonReader::Reader reader(std::cin);
     reader.Reply(std::cout);
-
-
 }
