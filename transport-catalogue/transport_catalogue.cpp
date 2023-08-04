@@ -62,6 +62,10 @@ const std::deque<Bus>& TransportCatalogue::GetBuses() const {
     return buses_;
 }
 
+size_t TransportCatalogue::GetStopCount() const {
+    return stops_.size();
+}
+
 const BusInfo TransportCatalogue::GetBusInfo(std::string_view name) const
 {
     if (!busname_to_bus_.count(name)) {
@@ -92,6 +96,26 @@ int64_t TransportCatalogue::GetDistance(const Stop* from, const Stop* to) const
 {
     // i want .contains(key) from c++20
     return dist_btn_stops_.count({ from, to }) > 0 ? dist_btn_stops_.at({ from, to }) : 0;
+}
+
+int64_t TransportCatalogue::GetDistance(const Bus* bus, size_t start, size_t count) const {
+
+    int64_t result = 0;
+    const auto& route = bus->route_;
+
+    auto end = start + count < bus->route_.size() ? route.begin() + start + count + 1 : route.end();
+    auto prev = route.begin() + start;
+
+    for (auto stop = route.begin() + start + 1; stop != end; ++stop) {
+
+        int64_t dst = GetDistance(*prev, *stop);
+        if (dst == 0 && bus->is_roundtrip_) {
+            dst = GetDistance(*stop, *prev);
+        }
+        result += dst;
+        prev = stop;
+    }
+    return result;
 }
 
 } // namespace TransportCatalogue

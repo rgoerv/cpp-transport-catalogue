@@ -2,6 +2,8 @@
 #include "json_reader.h"
 #include "json_builder.h"
 #include "map_renderer.h"
+#include "transport_catalogue.h"
+#include "transport_router.h"
 
 #include <sstream>
 
@@ -93,6 +95,9 @@ void Reader::AgreeDistances(const std::vector<const domain::Stop*>& stops, int64
 void Reader::StatRequestHandle() {
     const Array stat_requests(document.GetRoot().AsDict().at("stat_requests"s).AsArray());
 
+    static graph graph_(catalogue.GetStopCount() * 2);
+    bool need_build_router = true;
+
     for (const auto& request : stat_requests) {
         const auto& type = request.AsDict().at("type"s).AsString();
         if (type == "Stop"s) {
@@ -101,8 +106,73 @@ void Reader::StatRequestHandle() {
             BusStatRequestHandle(request);
         } else if (type == "Map") {
             MapStatRequestHandle(request);
+        } else if (type == "Route") {
+            if (need_build_router) {
+                BuildGraph(graph_); // build one graph with all, to use in transport router
+                BuildTransportRouter(graph_);
+                need_build_router = false;
+            }
+            RouterStatRequestHandle(request);
         }
     }
+}
+
+void Reader::BuildGraph(graph& graph_) {
+
+    constexpr const static double M = 1'000;
+    constexpr const static double MIN = 60;
+    constexpr const static double CONVERSION = M / MIN;
+
+    const RoutingSettings routing_settings(GetRoutingSettings());
+    VertexId general_id = 0;
+    
+    for (const auto& bus : catalogue.GetBuses()) {
+        const auto& stops = bus.route_;
+
+        size_t start = 0;
+        for (auto stop = stops.begin(); stop + 1 != stops.end(); ++stop) {
+
+            VertexId from = general_id;
+            if (stop_to_vertex.count(*stop) > 0) {
+                from = stop_to_vertex[*stop];
+            } else {
+                stop_to_vertex[*stop] = from;
+                id_to_stop[from] = *stop;
+                ++general_id;
+            }
+
+            size_t count = 1; // count stops between start and next bus stop - span count
+            for (auto following_stop = stop + 1; following_stop != stops.end(); ++following_stop) {         
+
+                VertexId to = general_id;
+                if (stop_to_vertex.count(*following_stop) > 0) {
+                    to = stop_to_vertex[*following_stop];
+                }
+                else {
+                    stop_to_vertex[*following_stop] = to;
+                    id_to_stop[to] = *following_stop;
+                    ++general_id;
+                }
+
+                graph_.AddEdge({ from, to, routing_settings.bus_wait_time_  +
+                     ((catalogue.GetDistance(&bus, start, count) * 1.0) / (routing_settings.bus_velocity_ * CONVERSION)) });
+
+                edge_to_bus_span[{from, to}] = {&bus, count};
+                ++count;
+            }
+            ++start;
+        }
+    }
+}
+
+void Reader::BuildTransportRouter(graph& graph_) {
+    router = std::move(std::make_unique<TRouter::TransportRouter>(TRouter::TransportRouter{
+        std::move(std::make_unique<graph>(graph_)), 
+        std::move(std::make_unique<Router<double>>(Router<double>{graph_})),
+        std::move(std::make_unique<Stop_VertexId>(stop_to_vertex)),
+        std::move(std::make_unique<Edge_BusSpan>(edge_to_bus_span)),
+        std::move(std::make_unique<VertexId_Sport>(id_to_stop)),
+        GetCatalogue(), GetRoutingSettings() }));
 }
 
 void Reader::BusStatRequestHandle(const Node& request) {
@@ -174,8 +244,61 @@ void Reader::MapStatRequestHandle(const Node& request) {
     stat_response.push_back(builder.Build());
 }
 
+void Reader::RouterStatRequestHandle(const Node& request) {
+
+    json::Builder builder;
+    builder.StartDict().Key("request_id"s).Value(request.AsDict().at("id"s).AsInt());
+
+    std::string_view from = request.AsDict().at("from"s).AsString();
+    std::string_view to = request.AsDict().at("to"s).AsString();
+
+    if (catalogue.GetBusesInStop(from).size() == 0 || catalogue.GetBusesInStop(to).size() == 0) {
+        builder.Key("error_message"s).Value("not found"s).EndDict();
+        stat_response.push_back(builder.Build());
+        return;
+    }
+
+    const auto& route_info = (*router).GetRouteInfo(from, to);
+    
+    if (!route_info) {
+        builder.Key("error_message"s).Value("not found"s).EndDict();
+        stat_response.push_back(builder.Build());
+        return;
+    }
+    
+    builder.Key("total_time"s).Value(json::Node((*route_info).total_time).AsDouble());
+    builder.Key("items"s).StartArray();
+
+    for (const auto& item : (*route_info).items) {
+        builder.StartDict();
+        switch (item.type)
+        {
+            case RouteReqestType::WAIT: builder.Key("type"s).Value("Wait"s)
+                .Key("stop_name"s).Value(json::Node(static_cast<std::string>(*(item.stop_name))).AsString())
+                .Key("time"s).Value(json::Node(item.time).AsDouble());
+                break;
+            case RouteReqestType::BUS: builder.Key("type"s).Value("Bus"s)
+                .Key("bus"s).Value(json::Node(static_cast<std::string>(*(item.bus_name))).AsString())
+                .Key("time"s).Value(json::Node(item.time).AsDouble())
+                .Key("span_count"s).Value(json::Node(static_cast<int>(*(item.span_count))).AsInt());
+                break;
+            default:
+                break;
+        }
+        builder.EndDict();
+    }
+    builder.EndArray().EndDict();
+    stat_response.push_back(builder.Build());
+}
+
 const TransportCatalogue& Reader::GetCatalogue() const {
     return catalogue;
+}
+
+const domain::RoutingSettings Reader::GetRoutingSettings() const {
+    const Dict routing_settings = document.GetRoot().AsDict().at("routing_settings"s).AsDict();
+    return domain::RoutingSettings{ routing_settings.at("bus_wait_time"s).AsDouble(),
+                                    routing_settings.at("bus_velocity"s).AsDouble() };
 }
 
 } // namespace JsonReader

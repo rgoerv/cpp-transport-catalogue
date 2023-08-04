@@ -28,9 +28,13 @@ public:
     const std::set<std::string_view>& GetBusesInStop(std::string_view stopname) const;
     void AddDistance(std::string_view stop_x, std::string_view stop_y, int64_t distance);
     int64_t GetDistance(const Stop* from, const Stop* to) const;
+    int64_t GetDistance(const Bus* bus, size_t start, size_t count) const;
+
     const std::unordered_map<std::string_view, const Bus*>& GetBusNameToBus() const;
     const std::unordered_map<const Stop*, std::set<std::string_view>>& GetStopToBuses() const;
     const std::deque<Bus>& GetBuses() const;
+    size_t GetStopCount() const;
+
 
 private:
     std::deque<Stop> stops_;

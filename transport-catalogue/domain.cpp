@@ -24,6 +24,16 @@ size_t HacherPair::operator()(const geo::Coordinates& coords) const {
         + std::hash<double> {}(coords.lng) * 37;
 }
 
+size_t HacherPair::operator()(const std::pair<const Bus*, size_t>& bus_span_count) const {
+    return std::hash<const void*> {}(bus_span_count.first)
+        + std::hash<size_t> {}(bus_span_count.second) * 37;
+}
+
+size_t HacherPair::operator()(const std::pair<size_t, size_t>& vertex_ids) const {
+    return std::hash<size_t> {}(vertex_ids.first)
+        + std::hash<size_t> {}(vertex_ids.second) * 37;
+}
+
 inline const double EPSILON = 1e-6;
 bool IsZero(double value) {
     return std::abs(value) < EPSILON;

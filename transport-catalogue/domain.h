@@ -15,6 +15,11 @@
 
 namespace domain {
 
+struct RoutingSettings {
+    double bus_wait_time_ = .0;
+    double bus_velocity_ = .0;
+};
+
 struct Stop {
     std::string name_; // название остановки
     geo::Coordinates coordinates; // координаты остановки
@@ -61,6 +66,8 @@ struct HacherPair
     size_t operator()(const std::pair<const Stop*, const Stop*>& stops) const; // catalogue dist_btn_stops_
     size_t operator()(const std::pair<std::string_view, std::string_view>& stops) const; // json reader : stops_to_dstns
     size_t operator()(const geo::Coordinates& coords) const; // map_renderer GetCoordinates
+    size_t operator()(const std::pair<const Bus*, size_t>& bus_span_count) const; // 
+    size_t operator()(const std::pair<size_t, size_t>& vertex_ids) const; // 
 };
 
 bool IsZero(double value);

@@ -1,5 +1,4 @@
 #include "json_reader.h"
-#include "map_renderer.h"
 
 #include <iostream>
 
@@ -14,7 +13,6 @@ int main()
      * с ответами.
      * Вывести в stdout ответы в виде JSON
      */
-    // setlocale(LC_ALL, "rus");
     JsonReader::Reader reader(std::cin);
     reader.Reply(std::cout);
 }

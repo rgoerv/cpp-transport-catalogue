@@ -228,8 +228,7 @@ void MapRenderer::AddCircleStop() {
             .SetRadius(render_settings.stop_radius)
             .SetFillColor("white"s);
         map_render.Add(buscircle_map);
-    }        
-       
+    }           
 }
 
 void MapRenderer::AddStopsNames() {
