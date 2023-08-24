@@ -4,24 +4,77 @@
 #include "map_renderer.h"
 #include "transport_catalogue.h"
 #include "transport_router.h"
+#include "serialization.h"
 
 #include <sstream>
+
+#include <fstream>
+#include <filesystem>
 
 namespace JsonReader {
 
 Reader::Reader(std::istream& input)
     : document(json::Load(input))
 {
+}
+
+void Reader::MakeBase() {
+    using namespace serial;
+    // build base
     BaseRequestHandle();
+    render_settings = renderer::RenderSettings(Document(Node(document.GetRoot().AsDict().at("render_settings"s).AsDict())));
+    // catalogue a filled, make serialization
+    serial::SerialTC serialize;
+    serialize.SetSerializationSettings(std::move(serial::SerializationSettings(document.GetRoot()
+                                    .AsDict().at("serialization_settings").AsDict().at("file").AsString())));
+    serialize.SetRenderSettings(std::move(render_settings));
+
+
+    static graph graph_(catalogue.GetStopCount() * 2);
+    BuildGraph(graph_);
+    BuildTransportRouter(graph_);
+
+    const Dict& rs = document.GetRoot().AsDict().at("routing_settings"s).AsDict();
+    routing_settings = TRouter::RoutingSettings{ rs.at("bus_wait_time"s).AsDouble(),
+                                                rs.at("bus_velocity"s).AsDouble() };
+
+    serialize.SetRoutingSettings(std::move(routing_settings));
+    serialize.SetGraph(std::move(graph_));
+    serialize.SetStopToVertex(std::move(stop_to_vertex));
+    serialize.SetEdgeToBusSpan(std::move(edge_to_bus_span));
+
+    serialize.Serialization(catalogue);
+}
+
+void Reader::ProcessRequests() {
+    using namespace serial;
+    // get builded base
+    serial::SerialTC serialize;
+    serialize.SetSerializationSettings(std::move(serial::SerializationSettings(document.GetRoot()
+                                    .AsDict().at("serialization_settings").AsDict().at("file").AsString())));
+    serialize.Deserialization(catalogue);
+    render_settings = serialize.GetRenderSettings();
+    routing_settings = serialize.GetRoutingSettings();
+    stop_to_vertex = serialize.GetStopToVertex();
+    id_to_stop = serialize.GetIdToStop();
+    edge_to_bus_span = serialize.GetEdgeToBusSpan();
+
+    graph graph_(std::move(serialize.GetGraph()));
+    BuildGraph(graph_);
+    BuildTransportRouter(graph_);
+    // process requests
     StatRequestHandle();
+    // reply
+    // std::ofstream ofs("output.json"s);
+    Reply(std::cout);
 }
 
 void Reader::Reply(std::ostream& output) const {
     Print(Document { stat_response }, output);
 }
 
-const json::Document Reader::GetRenderSettings() const {
-    return Document { Node { document.GetRoot().AsDict().at("render_settings"s).AsDict() } };
+const renderer::RenderSettings& Reader::GetRenderSettings() const {
+    return render_settings;
 }
 
 void Reader::BaseRequestHandle() {
@@ -95,9 +148,6 @@ void Reader::AgreeDistances(const std::vector<const domain::Stop*>& stops, int64
 void Reader::StatRequestHandle() {
     const Array stat_requests(document.GetRoot().AsDict().at("stat_requests"s).AsArray());
 
-    static graph graph_(catalogue.GetStopCount() * 2);
-    bool need_build_router = true;
-
     for (const auto& request : stat_requests) {
         const auto& type = request.AsDict().at("type"s).AsString();
         if (type == "Stop"s) {
@@ -107,11 +157,6 @@ void Reader::StatRequestHandle() {
         } else if (type == "Map") {
             MapStatRequestHandle(request);
         } else if (type == "Route") {
-            if (need_build_router) {
-                BuildGraph(graph_); // build one graph with all, to use in transport router
-                BuildTransportRouter(graph_);
-                need_build_router = false;
-            }
             RouterStatRequestHandle(request);
         }
     }
@@ -171,7 +216,7 @@ void Reader::BuildTransportRouter(graph& graph_) {
         std::move(std::make_unique<Router<double>>(Router<double>{graph_})),
         std::move(std::make_unique<Stop_VertexId>(stop_to_vertex)),
         std::move(std::make_unique<Edge_BusSpan>(edge_to_bus_span)),
-        std::move(std::make_unique<VertexId_Sport>(id_to_stop)),
+        std::move(std::make_unique<VertexId_Stop>(id_to_stop)),
         GetCatalogue(), GetRoutingSettings() }));
 }
 
@@ -295,10 +340,8 @@ const TransportCatalogue& Reader::GetCatalogue() const {
     return catalogue;
 }
 
-const domain::RoutingSettings Reader::GetRoutingSettings() const {
-    const Dict routing_settings = document.GetRoot().AsDict().at("routing_settings"s).AsDict();
-    return domain::RoutingSettings{ routing_settings.at("bus_wait_time"s).AsDouble(),
-                                    routing_settings.at("bus_velocity"s).AsDouble() };
+TRouter::RoutingSettings Reader::GetRoutingSettings() const {
+    return routing_settings;
 }
 
 } // namespace JsonReader

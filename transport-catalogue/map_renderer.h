@@ -9,12 +9,11 @@
 namespace renderer {
 
 struct RenderSettings {
-    RenderSettings(const json::Document& render_settings) noexcept;
+    RenderSettings() = default;
+    RenderSettings(const json::Document& render_settings_) noexcept;
 
-    std::vector<svg::Color> GetPalette() const;
+    std::vector<svg::Color> GetPalette(const json::Array& palette_settings) const;
     svg::Color GetColor(const json::Node& color) const;
-
-    json::Document render_settings;
 
     double width;
     double height;
@@ -32,7 +31,7 @@ struct RenderSettings {
 
 class MapRenderer {
 public:
-    MapRenderer(json::Document settings, const Catalogue::TransportCatalogue& ts);
+    MapRenderer(RenderSettings settings, const Catalogue::TransportCatalogue& ts);
     void Render(std::ostream& out) const;
 private:
     RenderSettings render_settings;

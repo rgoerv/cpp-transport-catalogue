@@ -17,8 +17,13 @@ using namespace domain;
 using namespace std::literals;
 
 using Stop_VertexId = std::unordered_map<const Stop*, VertexId>;
-using VertexId_Sport = std::unordered_map<VertexId, const Stop*>;
+using VertexId_Stop = std::unordered_map<VertexId, const Stop*>;
 using Edge_BusSpan = std::unordered_map<std::pair<VertexId, VertexId>, std::pair<const Bus*, size_t>, HacherPair>;
+
+struct RoutingSettings {
+    double bus_wait_time_ = .0;
+    double bus_velocity_ = .0;
+};
 
 enum class RouteReqestType {
 	NONE,
@@ -52,9 +57,9 @@ public:
 		std::unique_ptr<Router<double>>&& router, 
 		std::unique_ptr<Stop_VertexId>&& vertex_ids,
 		std::unique_ptr<Edge_BusSpan>&& span_counts,
-		std::unique_ptr<VertexId_Sport>&& id_stop,
+		std::unique_ptr<VertexId_Stop>&& id_stop,
 		const Catalogue::TransportCatalogue& ts,
-		const domain::RoutingSettings routing_settings)
+		const RoutingSettings routing_settings)
 		: graph_(std::move(graph)),
 		router_(std::move(router)),
 		stop_to_vertex(std::move(vertex_ids)),
@@ -72,12 +77,12 @@ private:
 	std::unique_ptr<Router<double>> router_ = nullptr;
 
 	std::unique_ptr<Stop_VertexId> stop_to_vertex = nullptr;
-	std::unique_ptr<VertexId_Sport> vertex_to_stop = nullptr;
+	std::unique_ptr<VertexId_Stop> vertex_to_stop = nullptr;
 
 	std::unique_ptr<Edge_BusSpan> edge_to_bus_span = nullptr;
 
 	const Catalogue::TransportCatalogue& ts_;
-	const domain::RoutingSettings routing_settings_;
+	const RoutingSettings routing_settings_;
 };
 
 } // namespace TRouter

@@ -242,7 +242,7 @@ void Document::Render(std::ostream& out) const {
     for (const auto& obj : objs) {
         obj->Render(ctx);
     }
-    out << "</svg>" << std::endl;
+    out << "</svg>"; // << std::endl;
 }
 
 }  // namespace svg

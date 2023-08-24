@@ -19,9 +19,12 @@ using namespace domain;
 class TransportCatalogue {
 public:
     void AddStop(const std::string& name, double lat, double lng);
+    const Stop* AddStop(uint32_t id, const std::string& name, double lat, double lng);
     const Stop* FindStop(std::string_view name) const;
+    const Stop* FindStop(uint32_t id) const;
     void AddBus(const std::string& name, const std::vector<const Stop*>& route,
         int64_t length, double geo_length, bool is_roundtrip, const Stop* last_stop);
+    void AddBus(Bus&& bus);
     const Bus* FindBus(std::string_view name) const;
     const BusInfo GetBusInfo(std::string_view name) const;
     bool CheckStop(std::string_view name) const;
@@ -32,9 +35,11 @@ public:
 
     const std::unordered_map<std::string_view, const Bus*>& GetBusNameToBus() const;
     const std::unordered_map<const Stop*, std::set<std::string_view>>& GetStopToBuses() const;
+    const std::unordered_map<std::pair<const Stop*, const Stop*>, int64_t, HacherPair>& GetDistances() const;
     const std::deque<Bus>& GetBuses() const;
+    size_t GetBusCount() const;
+    const std::deque<Stop>& GetStops() const;
     size_t GetStopCount() const;
-
 
 private:
     std::deque<Stop> stops_;

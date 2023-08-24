@@ -15,16 +15,22 @@
 
 namespace domain {
 
-struct RoutingSettings {
-    double bus_wait_time_ = .0;
-    double bus_velocity_ = .0;
-};
+static uint32_t id_count = 0;
 
 struct Stop {
+    uint32_t id = 0;
     std::string name_; // название остановки
     geo::Coordinates coordinates; // координаты остановки
     explicit Stop(std::string name, double latit, double longt)
-        : name_(name)
+        : id(id_count++)
+        , name_(name)
+        , coordinates({latit, longt})
+    {
+    }
+
+    explicit Stop(uint32_t id_, std::string name, double latit, double longt)
+        : id(id_)
+        , name_(name)
         , coordinates({latit, longt})
     {
     }

@@ -2,6 +2,7 @@
 
 #include "transport_catalogue.h"
 #include "transport_router.h"
+#include "map_renderer.h"
 #include "geo.h"
 #include "domain.h"
 #include "json.h"
@@ -22,7 +23,7 @@ using namespace graph;
 using namespace TRouter;
 
 using Stop_VertexId = std::unordered_map<const Stop*, VertexId>;
-using VertexId_Sport = std::unordered_map<VertexId, const Stop*>;
+using VertexId_Stop = std::unordered_map<VertexId, const Stop*>;
 using Edge_BusSpan = std::unordered_map<std::pair<VertexId, VertexId>, std::pair<const Bus*, size_t>, HacherPair>;
 
 class Reader {
@@ -30,14 +31,18 @@ public:
     using graph = DirectedWeightedGraph<double>;
 
     Reader(std::istream& input);
-    void Reply(std::ostream& output) const;
+    void MakeBase();
+    void ProcessRequests();
 
     const TransportCatalogue& GetCatalogue() const;
-    const json::Document GetRenderSettings() const;
-    const domain::RoutingSettings GetRoutingSettings() const;
+    const renderer::RenderSettings& GetRenderSettings() const;
+    TRouter::RoutingSettings GetRoutingSettings() const;
 
 private:
     json::Document document;
+    renderer::RenderSettings render_settings;
+    TRouter::RoutingSettings routing_settings;
+
     TransportCatalogue catalogue;
     std::unordered_map<std::pair<std::string_view, std::string_view>, int64_t, HacherPair> stops_to_dstns;
     Array stat_response;
@@ -45,9 +50,11 @@ private:
     std::unique_ptr<TRouter::TransportRouter> router;
 
     Stop_VertexId stop_to_vertex;
-    VertexId_Sport id_to_stop;
+    VertexId_Stop id_to_stop;
 
     Edge_BusSpan edge_to_bus_span;
+
+    void Reply(std::ostream& output) const;
 
     void BaseRequestHandle();
     void StopBaseRequestHandle(const Array& base_requests);

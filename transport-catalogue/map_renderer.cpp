@@ -9,7 +9,7 @@ namespace renderer {
 
 using namespace std::literals;
 
-MapRenderer::MapRenderer(json::Document settings, const Catalogue::TransportCatalogue& ts)
+MapRenderer::MapRenderer(RenderSettings settings, const Catalogue::TransportCatalogue& ts)
     : render_settings(std::move(settings))
     , catalogue(ts)
 {
@@ -26,9 +26,8 @@ MapRenderer::MapRenderer(json::Document settings, const Catalogue::TransportCata
 }
 
 RenderSettings::RenderSettings(const json::Document& render_settings_) noexcept 
-    : render_settings(render_settings_)
 {
-    const auto& settings = render_settings.GetRoot().AsDict();
+    const auto& settings = render_settings_.GetRoot().AsDict();
 
     width = settings.at("width"s).AsDouble();
     height = settings.at("height"s).AsDouble();
@@ -49,7 +48,7 @@ RenderSettings::RenderSettings(const json::Document& render_settings_) noexcept
 
     underlayer_color = GetColor(settings.at("underlayer_color"s));
     underlayer_width = settings.at("underlayer_width"s).AsDouble();
-    color_palette = GetPalette();
+    color_palette = GetPalette(settings.at("color_palette").AsArray());
 }
 
 void MapRenderer::Render(std::ostream& out) const {
@@ -101,8 +100,7 @@ svg::Color RenderSettings::GetColor(const json::Node& color) const {
     return result_color;
 }
 
-std::vector<svg::Color> RenderSettings::GetPalette() const {
-    const auto& palette_settings = render_settings.GetRoot().AsDict().at("color_palette").AsArray();
+std::vector<svg::Color> RenderSettings::GetPalette(const json::Array& palette_settings) const {
     std::vector<svg::Color> palette;
     palette.reserve(palette_settings.size());
 
